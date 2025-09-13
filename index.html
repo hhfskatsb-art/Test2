@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Draw with Mouse</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      margin: 10px;
+    }
+    #canvas {
+      border: 2px solid black;
+      background: white;
+      cursor: crosshair;
+    }
+    #controls {
+      margin: 10px;
+    }
+    button {
+      padding: 6px 12px;
+      margin: 0 5px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    input[type="color"] {
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Draw with Mouse</h1>
+  <div id="controls">
+    <button id="clear">Clear</button>
+    <label>Color: <input type="color" id="color" value="#000000"></label>
+    <label>Size: <input type="number" id="size" value="3" min="1" max="50"></label>
+  </div>
+  <canvas id="canvas" width="800" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const clearBtn = document.getElementById("clear");
+    const colorPicker = document.getElementById("color");
+    const sizeInput = document.getElementById("size");
+
+    let drawing = false;
+    let color = colorPicker.value;
+    let size = parseInt(sizeInput.value);
+
+    canvas.addEventListener("mousedown", () => (drawing = true));
+    canvas.addEventListener("mouseup", () => (drawing = false));
+    canvas.addEventListener("mouseout", () => (drawing = false));
+
+    canvas.addEventListener("mousemove", draw);
+
+    colorPicker.addEventListener("input", (e) => (color = e.target.value));
+    sizeInput.addEventListener("input", (e) => (size = parseInt(e.target.value)));
+
+    clearBtn.addEventListener("click", () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    function draw(e) {
+      if (!drawing) return;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(e.offsetX, e.offsetY, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  </script>
+</body>
+</html>
