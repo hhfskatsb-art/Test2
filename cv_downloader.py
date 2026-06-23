@@ -32,15 +32,63 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
 
 from playwright.sync_api import (
+    Error as PWError,
     TimeoutError as PWTimeout,
     sync_playwright,
 )
+
+
+def base_dir() -> Path:
+    """Ordner, in dem das Programm/die .exe liegt (auch im PyInstaller-Build)."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def ensure_chromium() -> None:
+    """Stellt sicher, dass der Chromium-Browser installiert ist.
+
+    Bei der gebauten .exe ist der Browser nicht enthalten, deshalb wird er
+    beim ersten Start automatisch nachgeladen (idempotent, danach gecached).
+    Funktioniert auch im PyInstaller-Frozen-Modus ueber den Playwright-Driver.
+    """
+    # Browser neben das Programm legen, damit alles portabel bleibt.
+    os.environ.setdefault(
+        "PLAYWRIGHT_BROWSERS_PATH", str(base_dir() / "ms-playwright")
+    )
+    try:
+        with sync_playwright() as p:
+            exe = p.chromium.executable_path
+        if exe and Path(exe).exists():
+            return  # Browser schon vorhanden
+    except PWError:
+        pass
+
+    log("Chromium wird einmalig heruntergeladen (kann etwas dauern)...")
+    try:
+        from playwright._impl._driver import (
+            compute_driver_executable,
+            get_driver_env,
+        )
+
+        driver = compute_driver_executable()
+        cmd = list(driver) if isinstance(driver, (list, tuple)) else [str(driver)]
+        subprocess.run(
+            [*cmd, "install", "chromium"], env=get_driver_env(), check=True
+        )
+    except Exception:  # noqa: BLE001 - Fallback fuer Nicht-Frozen-Umgebung
+        subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"], check=True
+        )
+    log("Chromium ist bereit.")
 
 # --------------------------------------------------------------------------- #
 # Konfiguration
@@ -50,11 +98,11 @@ from playwright.sync_api import (
 # Passe das ggf. an die konkrete Such-/Ergebnisseite an, die du nutzt.
 START_URL = "https://candidat.francetravail.fr/"
 
-# Ordner, in dem die CVs landen (eigener Folder).
-OUTPUT_DIR = Path("cv_downloads")
+# Ordner, in dem die CVs landen (eigener Folder, neben dem Programm/der .exe).
+OUTPUT_DIR = base_dir() / "cv_downloads"
 
 # Datei mit dem gespeicherten Login (Cookies/Session).
-STORAGE_STATE = Path(".ft_session.json")
+STORAGE_STATE = base_dir() / ".ft_session.json"
 
 # Liste bereits geladener CVs (zum Ueberspringen beim naechsten Lauf).
 SEEN_FILE = OUTPUT_DIR / "_geladen.json"
@@ -123,6 +171,7 @@ def save_seen(seen: set[str]) -> None:
 # --------------------------------------------------------------------------- #
 
 def do_login() -> None:
+    ensure_chromium()
     log("Login-Modus: Browser oeffnet sich. Bitte einloggen (inkl. 2FA).")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
@@ -225,9 +274,13 @@ def _go_back(page) -> None:
 
 def run(headless: bool = True) -> None:
     if not STORAGE_STATE.exists():
-        log("Keine gespeicherte Session. Bitte zuerst: python cv_downloader.py --login")
-        sys.exit(1)
+        log("Keine gespeicherte Session gefunden – starte zuerst den Login.")
+        do_login()
+        if not STORAGE_STATE.exists():
+            log("Login wurde nicht abgeschlossen. Abbruch.")
+            return
 
+    ensure_chromium()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     seen = load_seen()
     stats = {"downloaded": 0, "skipped": 0, "already": 0}
@@ -302,10 +355,15 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.login:
-        do_login()
-    else:
-        run(headless=not args.show)
+    try:
+        if args.login:
+            do_login()
+        else:
+            run(headless=not args.show)
+    finally:
+        # Bei der .exe (Doppelklick) Fenster offen halten, sonst schliesst es sofort.
+        if getattr(sys, "frozen", False):
+            input("\nFertig. ENTER zum Schliessen...")
 
 
 if __name__ == "__main__":

@@ -49,6 +49,37 @@ python cv_downloader.py --show
 
 Die CVs liegen danach in `cv_downloads/`.
 
+## Als .exe / Programmdatei bauen
+
+Du brauchst dann kein Python mehr zum Ausführen.
+
+### Variante A – automatisch per GitHub (empfohlen, kein Setup)
+
+1. Code ist gepusht → der Workflow **„Build EXE"** läuft automatisch
+   (Tab **Actions** auf GitHub), oder manuell über *Run workflow* starten.
+2. Nach dem Lauf unter dem Job-Eintrag → **Artifacts**:
+   - `FranceTravailCVDownloader-windows` → die `.exe`
+   - `FranceTravailCVDownloader-linux` → Linux-Binary
+3. Herunterladen, entpacken, **doppelklicken**.
+
+### Variante B – lokal selbst bauen
+
+**Windows:** `build.bat` doppelklicken → Ergebnis in
+`dist\FranceTravailCVDownloader.exe`.
+
+**Linux/macOS:** `bash build.sh` → Ergebnis in
+`dist/FranceTravailCVDownloader`.
+
+> Voraussetzung: Python 3.10+ ist installiert. Chromium wird **beim ersten
+> Start der .exe automatisch nachgeladen** – die EXE selbst bleibt klein.
+
+### Bedienung der .exe
+
+- **Doppelklick** → falls noch kein Login vorhanden, öffnet sich automatisch der
+  Browser zum Einloggen; danach läuft der Download im Hintergrund.
+- Login-Session (`.ft_session.json`) und der Ordner `cv_downloads/` liegen
+  **direkt neben der .exe**.
+
 ## Anpassung
 
 France Travail ändert sein Layout gelegentlich. Falls nichts gefunden wird,

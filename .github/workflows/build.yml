@@ -1,0 +1,58 @@
+name: Build EXE
+
+# Baut automatisch die Windows-.exe (und eine Linux-Binary) und stellt sie
+# als Download bereit. Laeuft bei jedem Push und kann manuell gestartet werden.
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhaengigkeiten installieren
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: EXE bauen
+        run: pyinstaller --noconfirm --onefile --name FranceTravailCVDownloader --collect-all playwright cv_downloader.py
+
+      - name: EXE als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: FranceTravailCVDownloader-windows
+          path: dist/FranceTravailCVDownloader.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhaengigkeiten installieren
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Binary bauen
+        run: pyinstaller --noconfirm --onefile --name FranceTravailCVDownloader --collect-all playwright cv_downloader.py
+
+      - name: Binary als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: FranceTravailCVDownloader-linux
+          path: dist/FranceTravailCVDownloader
