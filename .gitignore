@@ -1,0 +1,11 @@
+# Login-Session (enthaelt Cookies – niemals committen!)
+.ft_session.json
+
+# Heruntergeladene CVs (personenbezogene Daten – nicht ins Repo)
+cv_downloads/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
